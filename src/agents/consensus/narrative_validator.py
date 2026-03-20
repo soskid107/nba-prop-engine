@@ -20,6 +20,7 @@ class NarrativeValidator(ValidatorAgent):
         self.db = db
 
     def validate(self, player_id: int, prop_type: str, line: float, reference_date: str = None) -> Vote:
+        slate_dt = self._resolve_reference_date(reference_date)
         # 1. Check Injury Status (The Veto)
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
@@ -44,7 +45,7 @@ class NarrativeValidator(ValidatorAgent):
             reason = row['reason'] or "No reason provided"
             fetched_at = self._parse_datetime(row['fetched_at'])
             report_dt = self._parse_datetime(row['report_date'])
-            is_stale = self._is_stale_injury_snapshot(status, p_play, fetched_at, report_dt)
+            is_stale = self._is_stale_injury_snapshot(status, p_play, fetched_at, report_dt, slate_dt)
 
             if is_stale:
                 return Vote(
@@ -86,7 +87,7 @@ class NarrativeValidator(ValidatorAgent):
         # (Simplified for Validator MVP - direct DB check for games)
         
         # Check for B2B
-        is_b2b = self._check_b2b(player_id)
+        is_b2b = self._check_b2b(player_id, slate_dt)
         if is_b2b:
              return Vote(
                 agent_name=self.name,
@@ -122,26 +123,26 @@ class NarrativeValidator(ValidatorAgent):
         p_play: Optional[float],
         fetched_at: Optional[datetime],
         report_dt: Optional[datetime],
+        reference_dt: datetime,
     ) -> bool:
-        now = datetime.now()
         status_text = (status or "").upper()
 
-        freshness_cutoff_days = 3 if (p_play is not None and p_play < 0.5) else 2
-        if status_text in {"GTD", "QUESTIONABLE", "PROBABLE", "DAY-TO-DAY"}:
-            freshness_cutoff_days = 2
+        freshness_cutoff_days = 2 if (p_play is not None and p_play < 0.5) else 1
+        if status_text in {"GTD", "QUESTIONABLE", "PROBABLE", "DAY-TO-DAY", "AVAILABLE"}:
+            freshness_cutoff_days = 1
 
-        if fetched_at and (now - fetched_at) <= timedelta(days=freshness_cutoff_days):
+        if fetched_at and (reference_dt - fetched_at) <= timedelta(days=freshness_cutoff_days):
             return False
 
-        if report_dt and (now.date() - report_dt.date()).days <= freshness_cutoff_days:
+        if report_dt and (reference_dt.date() - report_dt.date()).days <= freshness_cutoff_days:
             return False
 
         # If neither timestamp is fresh enough, do not let an old note veto today's market.
         return True
 
-    def _check_b2b(self, player_id: int) -> bool:
+    def _check_b2b(self, player_id: int, reference_dt: datetime) -> bool:
         """Check if player played yesterday."""
-        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        yesterday = (reference_dt - timedelta(days=1)).strftime('%Y-%m-%d')
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -149,3 +150,10 @@ class NarrativeValidator(ValidatorAgent):
                 WHERE player_id = ? AND game_date = ?
             """, (player_id, yesterday))
             return cursor.fetchone() is not None
+
+    def _resolve_reference_date(self, reference_date: Optional[str]) -> datetime:
+        if reference_date:
+            parsed = self._parse_datetime(reference_date)
+            if parsed:
+                return parsed
+        return datetime.now()

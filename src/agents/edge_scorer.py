@@ -111,8 +111,9 @@ class EdgeScorer:
             return abs(odds) / (abs(odds) + 100)
             
         prob_over = audited_prediction.get('prob_over')
+        prob_under = audited_prediction.get('prob_under')
          # [FIX] Calculate probability if missing (Agent 4 hasn't run yet)
-        if prob_over is None:
+        if prob_over is None or prob_under is None:
             mean = audited_prediction.get('mean')
             std = audited_prediction.get('std')
             if mean is not None and std is not None and std > 0.01 and market_line is not None:
@@ -423,6 +424,8 @@ class EdgeScorer:
             'score': round(final_score, 1),
             'tier': tier,
             'direction': direction,
+            'logic_override_applied': bool(logic_override),
+            'logic_override_reason': override_reason or '',
             'edge_questions': edge_questions,
             'all_questions_answered': all_answered,
             'explanation': explanation,
@@ -625,6 +628,10 @@ class EdgeScorer:
         Build the human-readable explanation.
         """
         if tier == 'reject':
+            logic_gate = edge_questions.get('Q0_logic_gate', {})
+            logic_reason = str(logic_gate.get('answer', '') or '').strip()
+            if logic_reason:
+                return f"{logic_reason}. Pick rejected."
             return f"No edge identified (score: {score:.0f}/100). Pick rejected."
         
         kill_scripts = fragility.get('kill_scripts', [])

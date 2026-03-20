@@ -1201,6 +1201,7 @@ class LearningLoopAgent:
         live pipeline.
         """
         miss_patterns = self.analyze_miss_patterns(lookback_days=lookback_days)
+        minutes_bias = self.analyze_component_bias('minutes', lookback_days=lookback_days)
         flags: List[str] = []
 
         top_reason = miss_patterns.get('top_reasons', [{}])[0].get('reason') if miss_patterns.get('top_reasons') else None
@@ -1226,6 +1227,8 @@ class LearningLoopAgent:
             flags.append('SYSTEM_SUPPRESS_FALLBACK_MODELS')
         if fallback_rate is not None and fallback_rate >= 0.20 and 'SYSTEM_SUPPRESS_FALLBACK_MODELS' not in flags:
             flags.append('SYSTEM_SUPPRESS_FALLBACK_MODELS')
+        if minutes_bias.is_significant and minutes_bias.mean_error > 1.5:
+            flags.append('SYSTEM_RAISE_MINUTES_BASELINE')
 
         return flags
 

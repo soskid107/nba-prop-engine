@@ -166,7 +166,8 @@ class MarketCalibratorAgent:
                     confidence='no_edge',
                     kelly_fraction=0.0,
                     edge_source='MISSING_INJURY_CONTEXT',
-                    reasoning=['Policy block: missing injury context after recent miss-pattern review.']
+                    reasoning=['Policy block: missing injury context after recent miss-pattern review.'],
+                    blocker_reason='missing injury context after recent miss-pattern review'
                 )
         
         # Calculate probabilities using normal distribution (with Shrinkage)
@@ -474,6 +475,18 @@ class MarketCalibratorAgent:
         Calculate P(over) and P(under) from normal distribution
         NOW WITH SHRINKAGE applied.
         """
+        if std is None or std <= 0.01:
+            if mean is None or line is None:
+                return 0.5, 0.5
+            raw_prob_over = 0.5 if abs(mean - line) < 0.1 else (0.60 if mean > line else 0.40)
+            raw_prob_under = 1 - raw_prob_over
+            prob_under = self._shrink_probability(raw_prob_under, confidence)
+            prob_over = self._shrink_probability(raw_prob_over, confidence)
+            total = prob_under + prob_over
+            prob_under /= total
+            prob_over /= total
+            return prob_over, prob_under
+
         # Standard normal CDF
         z_score = (line - mean) / std
         

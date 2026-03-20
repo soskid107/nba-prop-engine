@@ -612,6 +612,30 @@ class PredictionOrchestrator:
                         market_odds=prop_odds
                     )
 
+                final_reason = ''
+                if betting_decision:
+                    if betting_decision.direction in ('OVER', 'UNDER'):
+                        final_reason = next(
+                            (
+                                str(reason).strip()
+                                for reason in (betting_decision.reasoning or [])
+                                if str(reason).strip()
+                            ),
+                            ''
+                        )
+                    else:
+                        final_reason = (
+                            str(betting_decision.blocker_reason or '').strip()
+                            or next(
+                                (
+                                    str(reason).replace('Final gate:', '').strip()
+                                    for reason in (betting_decision.reasoning or [])
+                                    if str(reason).strip()
+                                ),
+                                'No betting decision returned'
+                            )
+                        )
+
                 edge_snapshot = match_context.get('edge_analysis', {})
                 candidate_tier = edge_snapshot.get('tier', 'reject')
                 candidate_direction = edge_snapshot.get('direction', 'NO_BET')
@@ -652,11 +676,7 @@ class PredictionOrchestrator:
                         if candidate_tier in ('parlay_core', 'playable') else
                         'edge_scorer'
                     ),
-                    'final_decision_reason': (
-                        ''
-                        if approved_bet else
-                        (betting_decision.blocker_reason if betting_decision else 'No betting decision returned')
-                    ),
+                    'final_decision_reason': final_reason,
                     'context_enrichment_failed': match_context.get('context_enrichment_failed', False),
                     'context_enrichment_error': match_context.get('context_enrichment_error', ''),
                 }

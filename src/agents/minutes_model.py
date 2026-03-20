@@ -69,6 +69,7 @@ class MinutesProjector:
         """
         stats = player_context.get('stats', {})
         adjustments = []
+        regime_flags = match_context.get('regime_flags', []) or []
         
         # === BASELINE: Weighted recent averages ===
         min_L5 = stats.get('minutes_L5', stats.get('l5_minutes', 0))
@@ -200,6 +201,30 @@ class MinutesProjector:
             if abs(lineup_minutes_adj) > 0.1:
                 projected += lineup_minutes_adj
                 adjustments.append(f"Lineup role context: {lineup_minutes_adj:+.1f} min")
+
+        # === POLICY-DRIVEN MINUTES RECOVERY ===
+        # Learning has repeatedly flagged minutes underprediction. Apply a
+        # small, role-aware uplift instead of a blunt global jump.
+        if 'SYSTEM_RAISE_MINUTES_BASELINE' in regime_flags:
+            role = str(
+                (lineup_context or {}).get('player_role', player_context.get('player_role', 'rotation'))
+            )
+            usage_delta = float((lineup_context or {}).get('usage_delta', 0.0) or 0.0)
+            starter_rate = stats.get('starter_rate', player_context.get('starter_rate', 1.0)) or 0.0
+            policy_adj = 0.0
+            if role == 'star':
+                policy_adj = 1.2
+            elif role == 'starter' or starter_rate >= 0.75:
+                policy_adj = 0.8
+            elif projected >= 20:
+                policy_adj = 0.4
+            if usage_delta > 0.025:
+                policy_adj += 0.2
+            if projected < 14:
+                policy_adj = min(policy_adj, 0.2)
+            if policy_adj > 0:
+                projected += policy_adj
+                adjustments.append(f"Policy minutes recovery: {policy_adj:+.1f} min")
         
         # === FLOOR / CEILING ===
         # Calculate std from recent games
