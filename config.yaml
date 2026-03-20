@@ -1,0 +1,60 @@
+# NBA Player Props Prediction Engine - Configuration
+# ================================================
+
+# API Keys
+api_keys:
+  the_odds_api: null
+  # Future backup: api_sports key if needed
+  api_sports: null
+
+# Database Configuration
+database:
+  path: "data/nba_props.db"
+  
+# Rate Limiting Settings
+rate_limits:
+  nba_api:
+    min_delay_seconds: 1.5
+    max_jitter_seconds: 0.5
+  the_odds_api:
+    max_daily_calls: 100
+    
+# Cache Settings
+cache:
+  enabled: true
+  directory: "data/cache"
+  expiry_hours: 24
+  
+# Model Settings
+model:
+  minutes:
+    type: "lightgbm"
+    rolling_windows: [3, 5, 10]
+  ppm:
+    type: "lightgbm"
+    rolling_windows: [3, 5, 10]
+    
+# Simulation Settings
+simulation:
+  n_simulations: 10000
+  random_seed: 42
+  
+# Injury Probability Mappings
+injury_probabilities:
+  OUT: 0.0
+  DOUBTFUL: 0.25
+  QUESTIONABLE: 0.50
+  PROBABLE: 0.90
+  AVAILABLE: 1.0
+  GTD: 0.50
+  DAY-TO-DAY: 0.60
+  
+# Logging
+logging:
+  level: "INFO"
+  file: "logs/pipeline.log"
+  
+# Current Season
+nba:
+  current_season: "2025-26"
+  season_start_date: "2025-10-22"

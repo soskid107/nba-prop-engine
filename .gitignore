@@ -1,0 +1,71 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.vs/
+.idea/
+.trae/
+*.swp
+*.swo
+
+# Data files (large, not for git)
+data/cache/
+data/raw/
+data/processed/
+*.db
+*.sqlite
+!data/nba_props_starter.db
+
+# Logs
+logs/
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Model artifacts
+models/*.pkl
+models/*.joblib
+!models/model_points.pkl
+!models/model_assists.pkl
+!models/model_rebounds.pkl
+!models/minutes_model.pkl
+!models/ppm_model.pkl
+!models/residual_model.pkl
+
+# Secrets (never commit!)
+.env
+secrets.yaml
+
+# Keep config template but not actual config with keys
+# config.yaml  # Uncomment if you want to gitignore the main config
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Output
+predictions/
+reports/
+*.csv
+!data/sample_*.csv
+report_*.md
+audit_report_*.md
+strict_audit_*.md
+predictions_*.csv
+training_data.csv
+test_output.txt
+ALERTS.log
+debug_live.log
+error.log
+pytest-cache-files-*/
+.pytest_tmp/
